@@ -132,6 +132,8 @@ class AppController extends Controller
 		$this->loadModel('TblcrawlerQueue');
 		$this->loadModel('TblrankingScore');
 		$connection = ConnectionManager::get('default');
+		
+		/*** when no domain selected ***/
 		if($type =='all')
 		{
 			if($status!='all')
@@ -150,16 +152,47 @@ class AppController extends Controller
 						WHEN TblcrawlerQueue.Status="error" THEN 4 END 
 						ASC','TblcrawlerQueue.Datecreated DESC');				
 			}			
+			/*** query for completed status to show article title and tags ***/
+			if($status=='completed')
+			{
+				
+				$urls = $this->TblcrawlerQueue->find('all', array(
 
-			$urls = $this->TblcrawlerQueue->find('all', array(
+						'contain' => array('Tblusers'),
+						'join' => array(
+							array(
+								'table'=>'tblarticle',
+								'alias' => 'Tblarticle',
+								'type'=>'INNER',
+								'conditions'=>array('TblcrawlerQueue.Url_id = Tblarticle.Url_id')
+							),
+							array(
+								'table'=>'tblclassification',
+								'alias' => 'Tblclassification',
+								'type'=>'LEFT',
+								'conditions'=>array('Tblclassification.Article_id = Tblarticle.Article_id')
+							)),
+						'conditions' => $condition,
+						'fields' => array('Article_title'=>'Tblarticle.Article_title','tag'=>'GROUP_CONCAT(Tblclassification.Tags)','TblcrawlerQueue.Url','TblcrawlerQueue.Url_id',
+						'TblcrawlerQueue.Status','Tblusers.Email','TblcrawlerQueue.Datecreated'),
+						'group' => 'Tblclassification.Article_id',
+						'order' => $order
+					));
+				
+			}
+			else
+			{
+				$urls = $this->TblcrawlerQueue->find('all', array(
 
-			'contain' => array('Tblusers'),
-			'conditions' => $condition,
-			'fields' => array('TblcrawlerQueue.Url','TblcrawlerQueue.Url_id',
-			'TblcrawlerQueue.Status','Tblusers.Email','TblcrawlerQueue.Datecreated'),
-			'order' => $order
-			));
+				'contain' => array('Tblusers'),
+				'conditions' => $condition,
+				'fields' => array('TblcrawlerQueue.Url','TblcrawlerQueue.Url_id',
+				'TblcrawlerQueue.Status','Tblusers.Email','TblcrawlerQueue.Datecreated'),
+				'order' => $order
+				));
+			}
 		}
+		/*** when domain selected ***/
 		else
 		{
 
@@ -182,19 +215,48 @@ class AppController extends Controller
 						WHEN TblcrawlerQueue.Status="error" THEN 4 END 
 						ASC','TblcrawlerQueue.Datecreated DESC');
 			}
-
-			$urls = $this->TblcrawlerQueue->find('all', array(
-			
-				'contain' => array('Tblusers'),
-				'join' => array('Tblarticle'=>array(
+			/*** query for completed status to show article title and tags ***/
+			if($status=='completed')
+			{
+				$urls = $this->TblcrawlerQueue->find('all', array(
+				
+					'contain' => array('Tblusers'),
+					'join' => array(
+							array(
 								'table'=>'tblarticle',
+								'alias' => 'Tblarticle',
 								'type'=>'LEFT',
-								'conditions'=>array('Tblarticle.Url_id = TblcrawlerQueue.Url_id'))),
-				'conditions' => $condition,
-				'fields' => array('TblcrawlerQueue.Url','TblcrawlerQueue.Status','TblcrawlerQueue.Url_id',
-				                  'Tblusers.Email','TblcrawlerQueue.Datecreated','Tblarticle.Article_date'),
-				'order' => $order
-			));		
+								'conditions'=>array('TblcrawlerQueue.Url_id = Tblarticle.Url_id')
+							),
+							array(
+								'table'=>'tblclassification',
+								'alias' => 'Tblclassification',
+								'type'=>'LEFT',
+								'conditions'=>array('Tblclassification.Article_id = Tblarticle.Article_id')
+							)),
+					'conditions' => $condition,
+					'fields' => array('Article_title'=>'Tblarticle.Article_title','tag'=>'GROUP_CONCAT(Tblclassification.Tags)',
+									  'TblcrawlerQueue.Url','TblcrawlerQueue.Url','TblcrawlerQueue.Status','TblcrawlerQueue.Url_id',
+									  'Tblusers.Email','TblcrawlerQueue.Datecreated','Tblarticle.Article_date'),
+					'group' => 'Tblclassification.Article_id',
+					'order' => $order
+				));
+			}
+			else
+			{
+				$urls = $this->TblcrawlerQueue->find('all', array(
+				
+					'contain' => array('Tblusers'),
+					'join' => array('Tblarticle'=>array(
+									'table'=>'tblarticle',
+									'type'=>'LEFT',
+									'conditions'=>array('Tblarticle.Url_id = TblcrawlerQueue.Url_id'))),
+					'conditions' => $condition,
+					'fields' => array('TblcrawlerQueue.Url','TblcrawlerQueue.Status','TblcrawlerQueue.Url_id',
+									  'Tblusers.Email','TblcrawlerQueue.Datecreated','Tblarticle.Article_date'),
+					'order' => $order
+				));	
+			}			
 		}
 		
 		$settings = [
@@ -352,11 +414,11 @@ class AppController extends Controller
 	{
 		$connection = ConnectionManager::get('default');
 		//$confidence = $this::get_confidence();
-		$sel_qry = "SELECT a.Article_id,a.`Article_date`,a.`Article_title`,a.`Url`,a.`Url_image`,
-								a.Url_id, a.`Article_desc`, a.`Clicks`,q.Status, GROUP_CONCAT(c.Tags) AS tag,
+		$sel_qry = "SELECT a.Article_id,a.`Article_date`,a.`Article_title`,q.`Url`,a.`Url_image`,a.`Content_type`,
+								q.Url_id, a.`Article_desc`, a.`Clicks`,q.Status, GROUP_CONCAT(c.Tags) AS tag,
 								GROUP_CONCAT(c.Classify_id) AS Classify_id
-								FROM `tblarticle` a 
-								LEFT JOIN tblcrawler_queue q ON a.`Url_id` = q.Url_id 
+								FROM tblcrawler_queue q
+								LEFT JOIN `tblarticle` a ON a.`Url_id` = q.Url_id 
 								LEFT JOIN tblclassification c ON a.Article_id = c.Article_id 
 								WHERE q.Url_id = ".$urlid." 
 								GROUP BY c.Article_id";
@@ -411,14 +473,27 @@ class AppController extends Controller
 			$confidence = $this->get_confidence();
 			$data = str_replace('"', "'", $data);
 			$tag = addslashes(trim($data));
+			
 			$date_created = date('Y-m-d H:i:s');
 			$check_tag = "SELECT `Tags` FROM `tblclassification` WHERE 
 							`Article_id` = ".$art_id." AND `Tags`='".$tag."'";
 			$check_tag_arr = $connection->execute($check_tag)->fetchAll('assoc');	
 			if(count($check_tag_arr)==0)
 			{
-				$ins_qry = "INSERT INTO `tblclassification`(`Article_id`, `Tags`,`Tag_id`, `Confidence`,`Datecreated`) 
-							VALUES (".$art_id.",'".$tag."',".$tagid.",".$confidence.",'".$date_created."')";
+				
+				/** seo tag ***/
+				$seotag = strtolower($tag);
+				$seotag=trim($seotag); 
+				$seotag = preg_replace('/[^A-Za-z0-9\.]/', '-', $seotag);
+				$seotag = preg_replace('/-+/', '-', $seotag);
+				$last_tagval = substr($seotag, -1);
+				if($last_tagval=='-')
+				{
+					$seotag = substr($seotag, 0, strlen($seotag)-1);
+				}
+				
+				$ins_qry = "INSERT INTO `tblclassification`(`Article_id`, `Tags`,`SEO_Tag`, `Tag_id`, `Confidence`,`Datecreated`) 
+							VALUES (".$art_id.",'".$tag."','".$seotag."',".$tagid.",".$confidence.",'".$date_created."')";
 				$connection->execute($ins_qry);
 				
 				$sel_classify_qry = 'SELECT `Classify_id` FROM `tblclassification` 
@@ -436,11 +511,12 @@ class AppController extends Controller
 		else if($action=='published' || $action=='prepublished')
 		{
 			$this->do_publish($url_id,$action,'string');
-			
+		
 		}
 		else if($action=='save')
 		{
 			parse_str($_POST['data'], $formval);
+			$content_type = $formval['content_type'];
 			$article_date = $formval['edit_artdate'];
 			$article_title = $formval['edit_arttitle'];
 			$article_desc = $formval['edit_artdesc'];
@@ -448,9 +524,10 @@ class AppController extends Controller
 			$artid = $formval['artid_live'];
 			$urlid = $formval['urlid_live'];
 			$update_qry = "UPDATE `tblarticle` SET `Article_title`='".addslashes($article_title)."',
-												   `Article_desc`='".addslashes($article_desc)."',
-												   `Article_date`='".$article_date."'
-												WHERE `Article_id`=".$artid;
+											   `Article_desc`='".addslashes($article_desc)."',
+											   `Article_date`='".$article_date."',
+											   `Content_type`='".$content_type."'
+											WHERE `Article_id`=".$artid;
 			$connection->execute($update_qry);
 			return $urlid;
 		}
@@ -461,6 +538,38 @@ class AppController extends Controller
 		else if($action=='delete')
 		{
 			$this->do_delete($url_id,'string');
+		}
+		else if($action=='complete')
+		{
+			if($url_id!='' && $art_id!='')
+			{
+				
+				parse_str($_POST['data'], $formval);
+				$content_type = $formval['content_type'];
+				$article_date = $formval['edit_artdate'];
+				$article_title = $formval['edit_arttitle'];
+				$article_desc = $formval['edit_artdesc'];
+				$article_clicks = $formval['edit_artclicks'];
+				$artid = $formval['artid_live'];
+				$urlid = $formval['urlid_live'];
+				$update_qry = "UPDATE `tblarticle` SET `Article_title`='".addslashes($article_title)."',
+												   `Article_desc`='".addslashes($article_desc)."',
+												   `Article_date`='".$article_date."',
+												   `Content_type`='".$content_type."'
+												WHERE `Article_id`=".$artid;
+				$connection->execute($update_qry);
+				
+				
+				$chk_classify_qry = "SELECT `Classify_id` FROM `tblclassification` 
+						WHERE `Article_id` =".$art_id;
+				$classify_arr = $connection->execute($chk_classify_qry)->fetchAll('assoc');
+				if(count($classify_arr)>0)
+				{
+					$update_qry = "UPDATE `tblcrawler_queue` SET `Status`='completed',
+								`Stage`='completed' WHERE `Url_id`=".$url_id; 
+					$connection->execute($update_qry);
+				}
+			}
 		}
 	}
 	
@@ -493,6 +602,26 @@ class AppController extends Controller
 		$this->loadModel('Tblusers');
 		$this->loadModel('TblcrawlerQueue');
 		$this->loadModel('TblrankingScore');
+		
+		if($_SESSION['live_art_title']!='')
+		{
+			$artsrchlive = $_SESSION['live_art_title'];
+			$artsearch = "MATCH (Tblarticle.`Article_title`) AGAINST ('".$artsrchlive."') AND ";
+			$field_live = array('Tblarticle.Article_date','Tblarticle.Url',
+							  'Tblarticle.Article_title','Tblarticle.Clicks',
+							  'TblcrawlerQueue.Status','TblcrawlerQueue.Url_id','Tblusers.Email',
+							  'title_relevance'=>'MATCH (Tblarticle.`Article_title`) AGAINST ("'.$artsrchlive.'")');
+			$orderby_live = 'title_relevance DESC,Tblarticle.Clicks DESC';
+		}
+		else 
+		{
+			$artsearch = '';
+			$field_live = array('Tblarticle.Article_date','Tblarticle.Url',
+							  'Tblarticle.Article_title','Tblarticle.Clicks',
+							  'TblcrawlerQueue.Status','TblcrawlerQueue.Url_id','Tblusers.Email');
+			$orderby_live = 'Tblarticle.Clicks DESC';
+		}
+		
 		if($domain=='all')
 			$domain_cond = '';
 		else
@@ -508,12 +637,11 @@ class AppController extends Controller
 		$articles = $this->Tblarticle->find('all', array(
 			
 			'contain' => array('TblrankingScore','TblcrawlerQueue','Tblusers'),
-			'conditions' => array($domain_cond.$filter_cond),
-			'fields' => array('Tblarticle.Article_date','Tblarticle.Url',
-							  'Tblarticle.Article_title','Tblarticle.Clicks',
-							  'TblcrawlerQueue.Status','TblcrawlerQueue.Url_id','Tblusers.Email'),
-			'order' => 'Tblarticle.Clicks DESC'
+			'conditions' => array($artsearch.$domain_cond.$filter_cond),
+			'fields' => $field_live,
+			'order' => $orderby_live
 		));
+		
 		$settings = ['page' => 1,
 					 'limit' => $limit,
 					  'maxLimit' => 100
@@ -806,15 +934,28 @@ class AppController extends Controller
 			
 			for($i=0;$i<count($classification);$i++)
 			{
-				$tag = addslashes($classification[$i]['tag_name']);
+				$tag = str_replace('"', "'", $classification[$i]['tag_name']);
+				$tag = addslashes($tag);
+				
+				/** seo tag ***/
+				$seotag = strtolower($tag);
+				$seotag=trim($seotag); 
+				$seotag = preg_replace('/[^A-Za-z0-9\.]/', '-', $seotag);
+				$seotag = preg_replace('/-+/', '-', $seotag);
+				$last_tagval = substr($seotag, -1);
+				if($last_tagval=='-')
+				{
+					$seotag = substr($seotag, 0, strlen($seotag)-1);
+				}
+				
+				
 				$tagid = $classification[$i]['tag_id'];
 				$confidence_float = $classification[$i]['confidence'];
 				$confidence = $confidence_float*100;
-				$date_created = date('Y-m-d H:i:s');
 				$ins_qry = 'INSERT INTO `tblclassification`
-								(`Article_id`, `Tags`, `Tag_id`, `Confidence`,`Datecreated`) 
-							VALUES ('.$article_id.',"'.$tag.'",'.$tagid.',"'.$confidence.'","'.$date_created.'")';
-				$connection->execute($ins_qry);			
+								(`Article_id`, `Tags`,`SEO_Tag`, `Tag_id`, `Confidence`,`Datecreated`) 
+							VALUES ('.$article_id.',"'.trim($tag).'","'.$seotag.'",'.$tagid.',"'.$confidence.'","'.$date_created.'")';
+				$connection->execute($ins_qry);				
 			}
 			
 			$monkey_process_end = microtime(true);
@@ -940,9 +1081,9 @@ class AppController extends Controller
 			$where="Url_id IN(". implode(',', $urlid).")";
 		else
 			$where="Url_id =".$urlid;
-
-			$update_qry = "UPDATE tblcrawler_queue SET `Status` = '".$status."'
-								WHERE ".$where;
+		
+		$update_qry = "UPDATE tblcrawler_queue SET `Status` = '".$status."'
+						WHERE ".$where;
 		
 		$connection->execute($update_qry);
 	}
@@ -1023,7 +1164,7 @@ class AppController extends Controller
 			$filter = $_SESSION['filter'];
 			$tag = $_SESSION['tag'];
 			if($_SESSION['sorting']!='')
-				$orderby = '(TblrankingScore.Domain_score*Clicks) DESC';
+				$orderby = '(TblrankingScore.Domain_score*Clicks) DESC, Tblarticle.Article_date DESC';
 			else
 				$orderby = 'Tblarticle.Article_date DESC';
 			
@@ -1057,9 +1198,9 @@ class AppController extends Controller
 											INNER JOIN tblranking_score r ON r.Domain_id = (a.Domain_id) 
 											INNER JOIN tblcrawler_queue q ON q.Url_id = (a.Url_id) 
 											WHERE MATCH (a.`Article_title`, a.`Article_desc`) AGAINST ("'.$filter.'") AND 
-											c.Tags IN ("'.$alltag.'") AND q.Status = "published" 
+											c.SEO_Tag IN ("'.$alltag.'") AND q.Status = "published" 
 											GROUP BY c.Article_id HAVING COUNT(c.Article_id) ='.$count;
-					$fields_select = array('Article_id','Article_date','Article_title',
+					$fields_select = array('Article_id','Article_date','Article_title','Content_type',
 											  'Url_image','Article_desc','url'=>'TblcrawlerQueue.Url',
 											  'domain'=>'TblrankingScore.Domain_name',
 											  'tag'=>'GROUP_CONCAT(Tblclassification.Tags)',
@@ -1072,42 +1213,16 @@ class AppController extends Controller
 				
 				else
 				{
-					if($_SESSION['seo']!='')
-					{
-			
-						/*$artid_qry ="SELECT a.Article_id,c.Tags FROM `tblclassification` c,tblarticle a, tblcrawler_queue q
-										WHERE c.Article_id = a.Article_id AND
-										a.Url_id = q.Url_id AND
-										q.Status = 'published' AND 
-										TRIM(TRAILING '-' FROM LOWER(REPLACE(REPLACE(REGEXP_REPLACE(REGEXP_REPLACE(c.`Tags`,' ','-'), '[^a-zA-Z0-9\.]','-'),'--','-'),'--','-')))
-										IN ('".$alltag."') AND 
-										c.`Confidence`>=".$confidence." GROUP BY c.Article_id HAVING COUNT(c.Article_id) =".$count;*/
-						$artid_qry ="SELECT a.Article_id,c.Tags FROM `tblclassification` c,tblarticle a, tblcrawler_queue q
-									WHERE c.Article_id = a.Article_id AND
-									a.Url_id = q.Url_id AND
-									q.Status = 'published' AND
-									TRIM(TRAILING '-' FROM LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(c.`Tags`,' ','-'), '&','-'),'?','-'),'--','-'),'--','-')))
-									IN ('".$alltag."') AND 
-									c.`Confidence`>=".$confidence." GROUP BY c.Article_id HAVING COUNT(c.Article_id) =".$count;
-						
-						$artidarr = $connection->execute($artid_qry)->fetchAll('assoc');
-						if(count($artidarr)>0)
-						{
-							$seo_tag = $artidarr[0]['Tags'];
-							$_SESSION['tag'] = $seo_tag;
-						}
-					}
-					else
-					{
-						$artid_qry ='SELECT c.Article_id FROM `tblclassification` c,tblarticle a,tblcrawler_queue q
-									WHERE  c.Article_id = a.Article_id AND
-									a.Url_id = q.Url_id AND
-									q.Status = "published" AND
-									c.Tags IN ("'.$alltag.'") AND 
-									c.`Confidence`>='.$confidence.' GROUP BY c.Article_id HAVING COUNT(c.Article_id) ='.$count;
-						$artidarr = $connection->execute($artid_qry)->fetchAll('assoc');
-					}
-					$fields_select = array('Article_id','Article_date','Article_title',
+					
+					$artid_qry ='SELECT c.Article_id FROM `tblclassification` c,tblarticle a,tblcrawler_queue q
+								WHERE  c.Article_id = a.Article_id AND
+								a.Url_id = q.Url_id AND
+								q.Status = "published" AND
+								c.SEO_Tag IN ("'.$alltag.'") AND 
+								c.`Confidence`>='.$confidence.' GROUP BY c.Article_id HAVING COUNT(c.Article_id) ='.$count;
+					$artidarr = $connection->execute($artid_qry)->fetchAll('assoc');
+					
+					$fields_select = array('Article_id','Article_date','Article_title','Content_type',
 							'Url_image','Article_desc','url'=>'TblcrawlerQueue.Url','domain'=>'TblrankingScore.Domain_name',
 							'tag'=>'GROUP_CONCAT(Tblclassification.Tags)');
 				}
@@ -1129,16 +1244,7 @@ class AppController extends Controller
 						'group' => 'Tblclassification.Article_id',
 					));
 					
-					/*$tag_query_alpha = 'Select DISTINCT (`Tags`) from tblclassification where 
-									Article_id IN('.$artids.') AND
-									`Confidence`>='.$confidence.' AND Tags NOT IN ("'.$alltag.'")
-									ORDER BY Tags ASC';
-										
-					 $tag_query_top = 'SELECT DISTINCT (`Tags`),COUNT(`Tags`) AS cnt 
-									  FROM tblclassification where Article_id IN('.$artids.') AND
-									  `Confidence`>='.$confidence.' AND Tags NOT IN ("'.$alltag.'")
-										GROUP BY `Tags` HAVING (cnt>0) 
-									ORDER BY cnt DESC';*/
+					
 				}
 				
 				$tag_query_top = 'SELECT c.`Tags` as Tags,COUNT(c.`Tags`) AS cnt 
@@ -1146,17 +1252,28 @@ class AppController extends Controller
 									WHERE  a.Article_id=c.`Article_id` AND
 										   q.Url_id=a.Url_id AND
 										   c.Confidence>='.$confidence.' AND 
-									q.Status="published" AND Tags NOT IN ("'.$alltag.'") 
+									q.Status="published" AND SEO_Tag NOT IN ("'.$alltag.'") 
 									GROUP BY c.`Tags` HAVING (cnt>0) 
 									ORDER BY cnt DESC';
 								
 				$tag_query_alpha = 'SELECT DISTINCT (`Tags`) as Tags FROM `tblclassification` c,
 								tblarticle a,tblcrawler_queue q
 								WHERE  a.Article_id=c.`Article_id` AND
-								   q.Url_id=a.Url_id AND Tags NOT IN ("'.$alltag.'") AND
+								   q.Url_id=a.Url_id AND SEO_Tag NOT IN ("'.$alltag.'") AND
 								   c.Confidence>='.$confidence.' AND 
 								q.Status="published" 
 								ORDER BY Tags ASC';
+								
+				$filtered_tag_qry = 'SELECT DISTINCT (`Tags`) as Tags, `SEO_Tag`
+									FROM `tblclassification` c,tblarticle a,tblcrawler_queue q
+									WHERE  a.Article_id=c.`Article_id` AND
+								   q.Url_id=a.Url_id AND SEO_Tag IN ("'.$alltag.'") AND
+								   c.Confidence>='.$confidence.' AND 
+									q.Status="published" 
+									ORDER BY Tags ASC';
+									
+				$filtered_tag_arr = $connection->execute($filtered_tag_qry)->fetchAll('assoc');
+				$_SESSION['filter_tag'] = $filtered_tag_arr;
 				
 			}
 			else
@@ -1173,7 +1290,7 @@ class AppController extends Controller
 														'type'=>'LEFT',
 														'conditions'=>array('Tblclassification.Article_id = Tblarticle.Article_id',
 																			'Tblclassification.Confidence>='.$confidence))),
-						'fields' => array('Article_id','Article_date','Article_title',
+						'fields' => array('Article_id','Article_date','Article_title','Content_type',
 										'Url_image','Article_desc','url'=>'TblcrawlerQueue.Url','domain'=>'TblrankingScore.Domain_name',
 										'tag'=>'GROUP_CONCAT(Tblclassification.Tags)'),
 						'conditions' => array('TblcrawlerQueue.Status = "published"'),
@@ -1183,23 +1300,6 @@ class AppController extends Controller
 					));
 					
 						
-					/*$tag_query_top = "SELECT c.`Tags` as Tags,COUNT(c.`Tags`) AS cnt 
-									FROM `tblclassification` c,tblarticle a,tblcrawler_queue q
-									WHERE  a.Article_id=c.`Article_id` AND
-										   q.Url_id=a.Url_id AND
-										   c.Confidence>=".$confidence." AND 
-									q.Status='published' GROUP BY c.`Tags` HAVING (cnt>0) 
-									ORDER BY cnt DESC";
-								
-					$tag_query_alpha = "SELECT DISTINCT (`Tags`) as Tags FROM `tblclassification` c,
-										tblarticle a,tblcrawler_queue q
-										WHERE  a.Article_id=c.`Article_id` AND
-										   q.Url_id=a.Url_id AND
-										   c.Confidence>=".$confidence." AND 
-										q.Status='published'
-										ORDER BY Tags ASC";*/
-					
-
 				}
 				else
 				{
@@ -1213,7 +1313,7 @@ class AppController extends Controller
 														'type'=>'LEFT',
 														'conditions'=>array('Tblclassification.Article_id = Tblarticle.Article_id',
 																			'Tblclassification.Confidence>='.$confidence))),
-						'fields' => array('Article_id','Article_date','Article_title',
+						'fields' => array('Article_id','Article_date','Article_title','Content_type',
 										'Url_image','Article_desc','url'=>'TblcrawlerQueue.Url',
 										'relevance'=>'MATCH (`Article_title`, `Article_desc`) AGAINST ("'.$filter.'")',
 										'title_relevance'=>'MATCH (`Article_title`) AGAINST ("'.$filter.'")',
@@ -1229,23 +1329,7 @@ class AppController extends Controller
 					));
 					
 					
-					/*$tag_query_alpha = 'SELECT DISTINCT(Tblclassification.Tags) FROM 
-									tblarticle Tblarticle LEFT OUTER JOIN tblclassification Tblclassification ON 
-									(Tblclassification.Article_id = Tblarticle.Article_id AND Tblclassification.Confidence>='.$confidence.') 
-									INNER JOIN tblranking_score TblrankingScore ON TblrankingScore.Domain_id = (Tblarticle.Domain_id) 
-									INNER JOIN tblcrawler_queue TblcrawlerQueue ON TblcrawlerQueue.Url_id = (Tblarticle.Url_id) 
-									WHERE (MATCH (`Article_title`, `Article_desc`) AGAINST ("'.$filter.'") AND 
-									TblcrawlerQueue.Status = "published")
-									ORDER BY `Tags` ASC';
-									
-					$tag_query_top = 'SELECT DISTINCT(Tblclassification.Tags),COUNT(Tblclassification.`Tags`) AS cnt FROM 
-									tblarticle Tblarticle LEFT OUTER JOIN tblclassification Tblclassification ON 
-									(Tblclassification.Article_id = Tblarticle.Article_id AND Tblclassification.Confidence>='.$confidence.') 
-									INNER JOIN tblranking_score TblrankingScore ON TblrankingScore.Domain_id = (Tblarticle.Domain_id) 
-									INNER JOIN tblcrawler_queue TblcrawlerQueue ON TblcrawlerQueue.Url_id = (Tblarticle.Url_id) 
-									WHERE (MATCH (`Article_title`, `Article_desc`) AGAINST ("'.$filter.'") AND 
-									TblcrawlerQueue.Status = "published") GROUP BY Tblclassification.`Tags` HAVING (cnt>0) 
-									ORDER BY cnt DESC';*/
+					
 									
 				}
 				
@@ -1333,5 +1417,43 @@ class AppController extends Controller
 						a.Url_id=q.Url_id AND q.Status='published' ORDER BY Tags ASC";
 		$tag_arr = $connection->execute($tag_distict)->fetchAll('assoc');
 		return $tag_arr;
+	}
+	public function save_article_tag($formval)
+	{
+		
+		$connection = ConnectionManager::get('default');
+		$content_type = $formval['content_type'];
+		$article_date = $formval['edit_artdate'];
+		$article_title = $formval['edit_arttitle'];
+		$article_desc = $formval['edit_artdesc'];
+		$urlid = $formval['urlid_live'];
+		$article_imgurl = $formval['edit_artimgurl'];
+		$article_url = $formval['edit_arturl'];
+		$artdomain_edit = $formval['edit_artdomain'];
+		$addtag_txt = $formval['addtag_txt'];
+		$domain_id = $this->check_domain($artdomain_edit);	
+		$date_created = date('Y-m-d H:i:s');
+		
+		$sel_qry = "SELECT `Userid` FROM `tblcrawler_queue` WHERE `Url_id`=".$urlid;
+		$sel_arr = $connection->execute($sel_qry)->fetchAll('assoc');
+		$userid = $sel_arr[0]['Userid'];
+		
+		$ins_qry = 'INSERT INTO `tblarticle`(`Url_id`, `Url`, `Article_title`, 
+										`Article_desc`, `Url_image`, `Article_date`, 
+										`Author`, `Domain_id`, `Userid`, `Clicks`, 
+										`Thumbs_up`, `Thumbs_down`, `Content_type`, `Datecreated`) 
+									VALUES ('.$urlid.',"'.$article_url.'","'.addslashes($article_title).'",
+											"'.addslashes($article_desc).'","'.$article_imgurl.'","'.$article_date.'",
+											"",'.$domain_id.','.$userid.',0,
+											0,0,"article","'.$date_created.'")';
+		$connection->execute($ins_qry);
+		$sel_artid_qry = "SELECT `Article_id` FROM `tblarticle` ORDER BY `Datecreated` DESC LIMIT 1";
+		$artid_qry_arr = $connection->execute($sel_artid_qry)->fetchAll('assoc');
+		$lastartid = $artid_qry_arr[0]['Article_id'];
+		
+		$addtag = $this->common_edit($urlid,$lastartid,'add_tag',$addtag_txt);
+		$editarr = $this->edit_view($urlid);
+		return $editarr;
+		
 	}
 }
