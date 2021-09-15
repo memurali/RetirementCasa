@@ -5,16 +5,23 @@ echo $this->Html->script('common.js');
 <?php
 if($render=='edit')
 {
-?>    
+?> 
+	<?php 
+		echo $this->Form->create(null,['name' => 'frmedit',
+				'id' => 'frmedit'],['data-abide'=>'','novalidate']); 
+	?>
     <div class="grid-x">
         <div class="large-3 end">
             <label>
-                <select>
-                  <option value="article">Article</option>
-                  <option value="Video">Video</option>
-                  <option value="Podcast">Podcast</option>
+                <?php
+				$content_type = $articlearr[0]["Content_type"];
+				?>
+                <select name='content_type' id='content_type'>
+                  <option value="article" <?php echo ($content_type=='article') ? 'selected' : 'notselected';?>>Article</option>
+                  <option value="video" <?php echo ($content_type=='video') ? 'selected' : 'notselected';?>>Video</option>
+                  <option value="podcast" <?php echo ($content_type=='podcast') ? 'selected' : 'notselected';?>>Podcast</option>
                 </select>
-              </label>
+            </label>
         </div>
     </div>
     <div class="article-structure">
@@ -24,15 +31,7 @@ if($render=='edit')
                 <!--<img src="assets/img/loading.gif" class="loading-gif">--->
             </div>
         </div>
-        <?php 
-            echo $this->Form->create(null,['name' => 'frmedit',
-                    'id' => 'frmedit'],['data-abide'=>'','novalidate','url' => [
-                    'controller' => 'Users',
-                    'action' => 'search',
-                    
-                    ]
-            ]); 
-        ?>
+       
         <div class="grid-x grid-margin-x">
             <div class="cell large-8">
                 <!--<span class="date"><input type='text' id='edit_artdate' name='edit_artdate' value='<?php echo date("F d, Y",strtotime($articlearr[0]["Article_date"]));?>'></span>--->
@@ -82,8 +81,19 @@ if($render=='edit')
                         </div>
                         <div class="grid-x" style="margin-top: 1rem;">
                             <div class="input-group">
-                                <input class="input-group-field" id="addtag_txt" type="text" placeholder="Add Tags">
-                                <div class="input-group-button">
+                                <input class="input-group-field" id="addtag_txt" type="text" placeholder="Add Tags" list='tag_datalist' oninput='tag_datalist_admin(this.value);' autocomplete="off">
+                                <?php
+								if(count($datalist_tags)>0)
+								{
+									echo '<datalist class=tag_datalist>';
+									foreach($datalist_tags as $tag)
+									{
+										echo '<option value="'.addslashes($tag['Tags']).'" />';
+									}
+									echo '</datalist>';
+								}
+								?>
+								<div class="input-group-button">
                                   <input type="button" id="btnadd_tag" class="button" value="Add">
                                 </div>
                             </div>
@@ -294,6 +304,14 @@ else
                                 </select>
                             </label>
                         </div>
+						<div class="float-left" style="margin-left: 10px;">
+							<label>
+								<input type='search' name='art_title_search' id='art_title_search' value='<?php echo $_SESSION['art_srch_live'];?>'>
+							</label>
+						</div>
+						<div class="float-left" style="margin-left: 10px;">
+							<a class="button" id='btn_live_art_srch' onclick='art_live_search();'>Search</a>
+						</div>
                         <div class="button-group float-right">
                             <a class="button secondary" data-open="do_recrawl">Re-Crawl</a>
                             <a class="button secondary" data-open="do_retag">Re-Tag</a>
@@ -306,7 +324,7 @@ else
                                     <tr>
                                         <th width="30"><input id="checkAll_live" class="table-checkboxes" type="checkbox"></th>
                                         <th width="78">Date<a onclick="sortTable(0,'date')" class="sort"></a></th>
-                                        <th width="500">URL</th>
+                                        <th width="500">Article Title</th>
                                         <th>From<a onclick="sortTable(2)" class="sort"></a></th>
                                         <th>Clicks<a onclick="sortTable(3,'number')" class="sort"></a></th>
                                         <th></th>

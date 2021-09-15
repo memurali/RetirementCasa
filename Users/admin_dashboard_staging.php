@@ -5,7 +5,8 @@
     <meta charset="utf-8" />
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin-Retirement Rover</title>
+    <meta name="robots" content="noindex">
+    <title>Admin-Seeking Retirement</title>
     <meta name="robots" content="noindex">
     <!--<link rel="stylesheet" href="assets/css/app.css">-->
     <?php
@@ -13,6 +14,7 @@
         echo $this->Html->script('jquery.js');
         echo $this->Html->script('common.js'); 
     ?>  
+	<script src="https://cdn.jsdelivr.net/npm/foundation-sites@6.6.3/dist/js/foundation.min.js" integrity="sha256-pRF3zifJRA9jXGv++b06qwtSqX1byFQOLjqa2PTEb2o=" crossorigin="anonymous"></script>
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script>
@@ -34,6 +36,15 @@
         
      });
     </script>
+	<style>
+	.table-content .url a:hover 
+	{
+		overflow: visible; 
+		white-space: normal; 
+		width: auto; 
+		
+	}
+	</style>
     <input type="hidden" id="actionname" name="actionname" value="staging"/>
     <!----publish--->
     <div class="reveal tiny" id="publishcon" data-reveal>
@@ -155,6 +166,7 @@
         <div class="large-3 end">
             <label>
                 <select>
+				  <option value="">--select--</option>
                   <option value="article">Article</option>
                   <option value="Video">Video</option>
                   <option value="Podcast">Podcast</option>
@@ -237,7 +249,7 @@
                     <li>
                          <?php
                         echo $this->Html->link(
-                        'Retirement Rover',
+                        'Seeking Retirement',
                         ['controller' => 'users', 'action' => 'index'],
                         ['class'=>'menu-text']
                         );
@@ -373,7 +385,10 @@
                                         </label>                                    
                                     </div>
                                     <div class="float-left" style="margin-left: 10px;">
-                                    <label>
+										<label>
+											<?php
+											$selected_status = $status;
+											?>
                                             <select id="selectstatus" onchange="filterstaging()" style="font-size: 13px;">
                                                 <option value="all" <?php echo ($status=='all') ? 'selected' : 'notselected';?>>All</option>
                                                 <option value="submitted" <?php echo ($status=='submitted') ? 'selected' : 'notselected';?>>Submitted</option>
@@ -402,10 +417,28 @@
                                             <tr>
                                                 <th width="30"><input id="CheckAll" class="table-checkboxes" type="checkbox"></th>
                                                 <th width="500">URL</th>
-                                                <th>From<a  id="stagingth"  onclick="sortTable(1)" class="sort"></a></th>
-                                                <th>Status<a id="stagingth" onclick="sortTable(2)" class="sort"></a></th>
-                                                <th>Date<a id="stagingth" onclick="sortTable(3)" class="sort"></a></th>
-                                                <th></th>
+                                                <?php
+												if($status=='completed')
+												{
+													echo '<th>Title</th>';
+													echo '<th>Tags</th>';
+												}
+												else
+												{
+												?>
+												<th>Status<a id="stagingth" onclick="sortTable(1)" class="sort"></a></th>
+												<th>Date<a id="stagingth" onclick="sortTable(2,'date')" class="sort"></a></th>
+												<?php
+												}
+												if($status=='error')
+												{
+													echo '<th></th>';
+												}
+												if($status=='error' || $status=='completed')
+												{
+													echo '<th></th>';
+												}
+												?>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -414,7 +447,6 @@
                                             $arrsize = sizeof($select_arr);
                                             if($arrsize>0)
                                             { 
-                                                
                                                 foreach($select_arr as $arr)
                                                 {          
                                                     if($arr['tblcrawler_queue']['Url_id']!='')
@@ -432,37 +464,54 @@
                                                         $date = $arr['Datecreated'];
                                                     }
                                                     echo '<tr>';
-                                                        echo '<th width="30"><input value="'.$url_id.'" class="table-checkboxes" type="checkbox"></th>';
-                                                        echo '<td width="500" class="url"><a href="'.$url.'" target="_blank" onclick=cookieurl("'.$url.'")>'.htmlspecialchars(str_replace('"', '', $url), ENT_QUOTES).'</a></td>';
-                                                        echo '<td>'.$arr['tbluser']['Email'].'</td>';
-                                                        if($status == 'submitted'|| $status == 'prepublished')
-                                                        {
-                                                            $td3='<td><input type="hidden" value=4/></td>';
-                                                            $td5='<td class="float-right"><a  class="label button tiny secondary" onclick=crawl('.$url_id.') >Crawl</a></td>';
-                                                        }
-                                                        if($status == 'processing')
-                                                        { 
-                                                            $td3='<td>'.$this->Html->image("../assets/img/loading.gif" , array('class' => 'loading-gif')).'<input type="hidden" value=2/></td>';
-                                                            $td5='<td class="float-right"></td>';
-                                                        }
-                                                        if($status == 'error')
-                                                        { 
-                                                            $td3='<td><input type="hidden" value=1/><a onclick=error_view('.$url_id.') data-open="error_view"><span class="label alert">Error</span></a></td>';
-                                                            $td5='<td class="float-right"><a  class="label button tiny secondary" onclick=crawl('.$url_id.') >Crawl</a></td>';
-                                                        }
-                                                        if($status == 'completed') 
-                                                        {
-                                                            $td3='<td><input type="hidden" value=3/><span class="label success">Completed</span></td>';                                                
-                                                            $td5='<td class="float-right"><a class="label button tiny expand" onclick=edit_article_staging('.$url_id.') data-open="editArticle">View</a></td>';
-                                                        }
-                                                        $td4 = '<td>'.$date.'</td>';
-                                                        echo $td3;
-                                                        echo $td4;
-                                                        echo $td5;
-                                                    echo '</tr>';
+														echo '<th width="30"><input value="'.$url_id.'" class="table-checkboxes" type="checkbox"></th>';
+														echo '<td width="500" class="url"><a href="'.$url.'" target="_blank" onclick=cookieurl("'.$url.'")>'.htmlspecialchars(str_replace('"', '', $url), ENT_QUOTES).'</a></td>';
+														//echo '<td>'.$arr['tbluser']['Email'].'</td>';
+														if($status=='completed')
+														{
+															if($selected_status=='completed')
+															{
+																echo '<td width="200">'.$arr['Article_title'].'</td>';
+																echo '<td width="200">'.$arr['tag'].'</td>';
+															}
+															else
+															{
+																$td3='<td><input type="hidden" value=3/><span class="label success">Completed</span></td>';                                                
+																$td4 = '<td>'.$date.'</td>';
+															}
+															$td5='<td class="float-right"><a class="label button tiny expand" onclick=edit_article_staging('.$url_id.') data-open="editArticle">View</a></td>';
+														}												
+														if($status == 'submitted'|| $status == 'prepublished')
+														{
+															$td3='<td><input type="hidden" value=4/></td>';
+															$td5='<td class="float-right"><a  class="label button tiny secondary" onclick=crawl('.$url_id.') >Crawl</a></td>';
+															$td4 = '<td>'.$date.'</td>';
+														}
+														if($status == 'processing')
+														{ 
+															$td3='<td>'.$this->Html->image("../assets/img/loading.gif" , array('class' => 'loading-gif')).'<input type="hidden" value=2/></td>';
+															$td5='<td class="float-right"></td>';
+															$td4 = '<td>'.$date.'</td>';
+														}
+														if($status == 'error')
+														{ 
+															$td3='<td><input type="hidden" value=1/><a onclick=error_view('.$url_id.') data-open="error_view"><span class="label alert">Error</span></a></td>';
+															if($selected_status=='error')
+															{
+																$td5='<td><a class="label button tiny expand" onclick=edit_article_staging('.$url_id.') data-open="editArticle">Edit</a></td>';
+																$td5.='<td class="float-right"><a  class="label button tiny secondary" onclick=crawl('.$url_id.') >Crawl</a></td>';
+															}
+															$td4 = '<td>'.$date.'</td>';
+														}
+																									
+														echo $td3;
+														echo $td4;
+														if($selected_status=='error' || $selected_status=='completed')
+															echo $td5;
+													echo '</tr>';
                                                 }
                                             }
-                                            ?>
+                                        ?>
                                         </tbody>
                                     </table>                                                                  
                                 </div>

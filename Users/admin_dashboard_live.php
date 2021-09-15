@@ -170,9 +170,10 @@
     <div class="large-3 end">
         <label>
             <select>
-              <option value="article">Article</option>
-              <option value="Video">Video</option>
-              <option value="Podcast">Podcast</option>
+              <option value="">--select--</option>
+			  <option value="article">Article</option>
+			  <option value="Video">Video</option>
+			  <option value="Podcast">Podcast</option>
             </select>
           </label>
     </div>
@@ -477,6 +478,14 @@
                                         </select>
                                     </label>
                                 </div>
+								<div class="float-left" style="margin-left: 10px;">
+                                    <label>
+                                        <input type='search' name='art_title_search' id='art_title_search' value='<?php echo $_SESSION['art_srch_live'];?>'>
+									</label>
+                                </div>
+								<div class="float-left" style="margin-left: 10px;">
+									<a class="button" id='btn_live_art_srch' onclick='art_live_search();'>Search</a>
+								</div>
                                 <div class="button-group float-right">
                                     <a class="button secondary" data-open="do_recrawl">Re-Crawl</a>
                                     <a class="button secondary" data-open="do_retag">Re-Tag</a>
@@ -489,7 +498,7 @@
                                             <tr>
                                                 <th width="30"><input id="checkAll_live" class="table-checkboxes" type="checkbox"></th>
                                                 <th width="78">Date<a onclick="sortTable(0,'date')" class="sort"></a></th>
-                                                <th width="500">URL</th>
+                                                <th width="500">Article Title</th>
                                                 <th>From<a onclick="sortTable(2)" class="sort"></a></th>
                                                 <th>Clicks<a onclick="sortTable(3,'number')" class="sort"></a></th>
                                                 <th></th>
