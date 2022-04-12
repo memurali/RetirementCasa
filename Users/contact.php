@@ -150,7 +150,7 @@
                     </div>
                 </div>
             </footer>
-            <script src="assets/js/app.js"></script>
+            <!--<script src="assets/js/app.js"></script>--->
             <?php
     echo $this->Html->script('app.js');
     ?>

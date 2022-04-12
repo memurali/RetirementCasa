@@ -36,7 +36,15 @@
         
      });
     </script>
-	
+	<style>
+	.table-content .url a:hover 
+	{
+		overflow: visible; 
+		white-space: normal; 
+		width: auto; 
+		
+	}
+	</style>
     <input type="hidden" id="actionname" name="actionname" value="staging"/>
     <!----publish--->
     <div class="reveal tiny" id="publishcon" data-reveal>
@@ -297,15 +305,6 @@
                         );
                         ?>
                     </li> 
-					<li>
-                        <?php    
-                        echo $this->Html->link(
-                        'Match',
-                        ['controller' => 'users', 'action' => 'admin-match'],
-                        ['class'=>'settings']
-                        );
-                        ?>
-                    </li>
                 </ul>
 
                 <ul class="vertical menu bottom">
@@ -368,7 +367,7 @@
                 </div>
             </div>
             <div id="stagingrender">
-                <div class="">
+                <div class="grid-container">
                     <div class="dashboard-content">
                         <div class="grid-x grid-margin-x">
                             <div class="cell large-12">
@@ -466,7 +465,7 @@
                                                     }
                                                     echo '<tr>';
 														echo '<th width="30"><input value="'.$url_id.'" class="table-checkboxes" type="checkbox"></th>';
-														echo '<td width="500" class="url"><a href="'.$url.'" target="_blank" onclick=cookieurl("'.$url.'") data-tooltip tabindex="1" title="'.$url.'" data-position="bottom" data-alignment="center">'.htmlspecialchars(str_replace('"', '', $url), ENT_QUOTES).'</a></td>';
+														echo '<td width="500" class="url"><a href="'.$url.'" target="_blank" onclick=cookieurl("'.$url.'")>'.htmlspecialchars(str_replace('"', '', $url), ENT_QUOTES).'</a></td>';
 														//echo '<td>'.$arr['tbluser']['Email'].'</td>';
 														if($status=='completed')
 														{

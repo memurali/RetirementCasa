@@ -59,17 +59,12 @@
                 </div>-->
                 
                 <div class="cell large-7 contact-text">
-                    <br><br>
-                    <h3>Retire Easier by Understanding Retirement </h3>
-                    <p class="lead">If you are looking for information on retirement, it is hard to know where to start. There are thousands of articles about retirement online, but they are scattered across hundreds of different websites.
-                        
-                    <p class="lead">Seeking Retirement compiles the best retirement educational resources into one place so that you can easily find them all in one spot. Our goal with this project is to help retirement seekers and retirees make better decisions when planning their financial future and retire happier. </p>
-                    
-                                        <p class="lead">The Seeking Retirement website contains over 10,000 articles on a wide range of topics related to retirement including: Retirement Planning, Lifestyle, Saving & Investing, Retirement Accounts, Early Retirement/FIRE, Calculators, Taxes, Places to Retire and much more (see Browse Categories). Every article has been reviewed by an editor for accuracy and relevance before being added to our database. Once you find an article that interests you just click and learn.</p>
-                                        
-                                         <p class="lead">We hope you enjoy it.  </p>
-                    
-                     <p class="lead"><a href="https://seekingretirement.com/contact">Feedback welcome</a> </p>
+                    <h3>Retiring is not as easy as you may think. </h3>
+                    <p class="lead">Retiring means different things to different people. So just figuring out what retirement means to you is a huge achievement.</p>
+                    <p class="lead">Retiring often means having enough money and not having to work. Well, this is different for everyone. There is no one answer. There are a multitude of factors to consider: lifestyle, income, expenses, health, family, the list goes on.</p>
+                    <p class="lead">Understanding retirement and the myriad of choices is daunting and time consuming. Those who have started their retirement journey to educate themselves will have noticed there is a lot of information everywhere. Where do you start? What is most useful? What is trustworthy?</p>
+                    <p class="lead">This is where Seeking Retirement comes into play. Seeking Retirement is a search engine for retirement knowledge. It crawls the web for retirement information (blogs, videos, podcasts, etc), and organizes it into topics or tags. With a simple click of  a tag, you can find the best content about a particular subject: 401ks, saving money, expenses, taxes, annuities, etc. Moreover, as the power of a community, you can rate the content to help other users find the best content, saving time for all.</p>
+                    <p class="lead">Seeking Retirement launched in June 2021 - beta. There are a lot more features in the works. We hope you find it useful and welcome your <a href="https://seekingretirement.com/users/contact">feedback</a>. </p>
                 </div>
             </div>
         </div>
@@ -78,14 +73,7 @@
                 <div class="grid-x grid-margin-x">
                     <div class="cell large-12">
                         <ul class="menu align-right">
-                            <li>
-								<?php
-								echo $this->Html->link(
-								'About',
-								['controller' => '', 'action' => 'about']
-								);
-								?>
-							</li>
+                            <li><a href="aboutus">About</a></li>
                             <li>
                                 <?php    
                                 echo $this->Html->link(
@@ -99,10 +87,10 @@
                 </div>
             </div>
         </footer>
-    </div>
-<!--<script src="assets/js/app.js"></script>--->
+                              </div>
+<script src="assets/js/app.js"></script>
 <?php
     echo $this->Html->script('app.js');
-?>
+    ?>
 </body>
 </html>

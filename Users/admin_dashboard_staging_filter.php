@@ -54,8 +54,9 @@ if($render=='edit_view')
 				  else
 					$urlimage = '../img/no-image.svg';
 				?>
-                <img class="thumbnail" style="background: url(<?php echo $urlimage;?>)">
-            </div>
+                <!---<img class="thumbnail" style="background: url(<?php echo $urlimage;?>)">--->
+				<?php echo $this->Html->image($urlimage,['class'=>'thumbnail']); ?>
+			</div>
         </div>
         <div class="grid-x">
             <div class="cell large-12">
@@ -279,7 +280,7 @@ else
 										}
 										echo '<tr>';
 											echo '<th width="30"><input value="'.$url_id.'" class="table-checkboxes" type="checkbox"></th>';
-											echo '<td width="500" class="url"><a href="'.$url.'" target="_blank" onclick=cookieurl("'.$url.'")>'.htmlspecialchars(str_replace('"', '', $url), ENT_QUOTES).'</a></td>';
+											echo '<td width="500" class="url"><a href="'.$url.'" target="_blank" onclick=cookieurl("'.$url.'") data-tooltip tabindex="1" title="'.$url.'" data-position="bottom" data-alignment="center">'.htmlspecialchars(str_replace('"', '', $url), ENT_QUOTES).'</a></td>';
 											//echo '<td>'.$arr['tbluser']['Email'].'</td>';
 											if($status=='completed')
 											{

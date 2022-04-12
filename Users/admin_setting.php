@@ -196,6 +196,15 @@
                         );
                         ?>
                     </li> 
+					<li>
+                        <?php    
+                        echo $this->Html->link(
+                        'Match',
+                        ['controller' => 'users', 'action' => 'admin-match'],
+                        ['class'=>'settings']
+                        );
+                        ?>
+                    </li>
                 </ul>
                 <ul class="vertical menu bottom">
                     <li>
@@ -272,6 +281,56 @@
 													</div>
 												</td>
 											</tr>
+											<tr>
+												<td>
+													<label>
+														<span>Number of Article limit:</span>
+													</label>
+												</td>
+												<td>
+													<div class="input-group">
+														<input type="number" id="art_limit" name="art_limit"  class="input-group-field" value="<?php echo $article_limit; ?>" placeholder="Article limit">
+													</div>
+												</td>
+											</tr>
+											<tr>
+												<td>
+													<label>
+														<span>Date filter:</span>
+													</label>
+												</td>
+												<td>
+													<div class="input-group">
+														<input type="date" id="date_filter" name="date_filter"  class="input-group-field" value="<?php echo $date_filter; ?>" placeholder="Date filter">
+													</div>
+												</td>
+											</tr>
+											<tr>
+												<td>
+													<label>
+														<span>Meta title:</span>
+													</label>
+												</td>
+												<td>
+													<div class="input-group">
+														<textarea id="meta_title" name="meta_title" placeholder="Meta title"><?php echo htmlspecialchars($meta_title,ENT_QUOTES); ?></textarea>
+													</div>
+												</td>
+											</tr>
+											
+											<tr>
+												<td>
+													<label>
+														<span>Meta description:</span>
+													</label>
+												</td>
+												<td>
+													<div class="input-group">
+														<textarea id="meta_desc" name="meta_desc" placeholder="Meta description"><?php echo htmlspecialchars($meta_desc,ENT_QUOTES); ?></textarea>
+													</div>
+												</td>
+											</tr>
+											
 											<tr>
 												<td></td>
 												<td>

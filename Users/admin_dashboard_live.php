@@ -323,6 +323,15 @@
                         );
                         ?>
                     </li> 
+					<li>
+                        <?php    
+                        echo $this->Html->link(
+                        'Match',
+                        ['controller' => 'users', 'action' => 'admin-match'],
+                        ['class'=>'settings']
+                        );
+                        ?>
+                    </li>
                 </ul>
                 <ul class="vertical menu bottom">
                     <li>

@@ -49,7 +49,8 @@ if($render=='edit')
 				  else
 					$urlimage = '../img/no-image.svg';
 				?>
-                <img class="thumbnail" style="background: url(<?php echo $urlimage;?>)">
+                <!---<img class="thumbnail" style="background: url(<?php echo $urlimage;?>)">--->
+				<?php echo $this->Html->image($urlimage,['class'=>'thumbnail']); ?>
             </div>
         </div>
         <div class="grid-x">
