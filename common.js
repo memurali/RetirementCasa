@@ -348,7 +348,7 @@ $(function() {
 		
 		
 	});
-	
+
 	
 });	
  
@@ -395,7 +395,7 @@ function stagingurlsubmit()
 		},
 		success: function(result) {
 			$('#stagingaddurl').val('');
-			$('#stagingrender').html(result);
+			$('#stagingrender').html(result).foundation();
 			$('.reveal-overlay').css('display','none');
 			$('#popup6').css('display','none');
 			$('#html_id').attr('class','no-js');
@@ -454,7 +454,7 @@ function stagingprocess(processtype)
 			success: function(result) {			
 				$('.reveal-overlay').css('display','none');
 				$('#'+processtype+'con').css('display','none');				
-				$('#stagingrender').html(result);
+				$('#stagingrender').html(result).foundation();
 				$('#approvalcount').html($('#staging').html());
 				$('#html_id').attr('class','no-js');
 			}
@@ -476,7 +476,7 @@ function crawl(id)
 			'X-CSRF-Token':$('meta[name="csrfToken"]').attr('content')
 		},
 		success: function(result) {			
-			$('#stagingrender').html(result);			
+			$('#stagingrender').html(result).foundation();;			
 		}
 	}); 
 }
@@ -496,7 +496,7 @@ function filterstaging()
 			'X-CSRF-Token':$('meta[name="csrfToken"]').attr('content')
 		},
 		success: function(result) {
-			$('#stagingrender').html(result);
+			$('#stagingrender').html(result).foundation();
 		}
 	});
 }
@@ -602,7 +602,7 @@ function edit_popup(action)
 				if(actionname=='')	
 					$("#domain_response").html(result);
 				else
-					$("#stagingrender").html(result);	
+					$("#stagingrender").html(result).foundation();
 				$('#approvalcount').html($('#staging').html());	
 			}
 		});
@@ -624,7 +624,7 @@ function edit_popup(action)
 				if(actionname=='')	
 					$("#domain_response").html(result);
 				else
-					$("#stagingrender").html(result);	
+					$("#stagingrender").html(result).foundation();
 			}
 		});
 	}
@@ -646,7 +646,7 @@ function edit_popup(action)
 				if(actionname=='staging')
 				{
 					$('#popup7').css('display','none');
-					$("#stagingrender").html(result);
+					$("#stagingrender").html(result).foundation();
 				}
 				else
 				{	
@@ -695,7 +695,7 @@ function edit_popup_staging(action)
 							$('#edit_publish').text('Unpublish');
 							$('#edit_publish').attr('onclick','edit_popup("prepublished")');
 						}
-						$("#stagingrender").html(result);	
+						$("#stagingrender").html(result).foundation();	
 						$('#approvalcount').html($('#staging').html());	
 					}
 				});
@@ -731,7 +731,7 @@ function edit_popup_staging(action)
 						'X-CSRF-Token':$('meta[name="csrfToken"]').attr('content')
 					},
 					success: function(result) {	
-						$("#stagingrender").html(result);
+						$("#stagingrender").html(result).foundation();
 						$('#comp_btn_staging').text('Completed');
 						$('#approvalcount').html($('#staging').html());	
 					}
@@ -764,7 +764,7 @@ function edit_popup_staging(action)
 				'X-CSRF-Token':$('meta[name="csrfToken"]').attr('content')
 			},
 			success: function(result) {
-				$("#stagingrender").html(result);	
+				$("#stagingrender").html(result).foundation();
 			}
 		});
 	}
@@ -784,7 +784,7 @@ function edit_popup_staging(action)
 			},
 			success: function(result) {				
 				$('#popup7').css('display','none');
-				$("#stagingrender").html(result);
+				$("#stagingrender").html(result).foundation();
 				
 				$('#editArticle').css('display','none');
 				$('#editArticle').attr('aria-hidden','true');
@@ -1238,8 +1238,8 @@ function remove_paginate_index(tagval='')
 	else
 	{
 		//newurl = newurl+'?page=1';
-		var title = 'Seeking Retirement';
-		var meta_desc = 'Seeking Retirement is a search engine for retirement information. Find retirement articles, videos, and podcasts all in one place';
+		var title = $('#conf_meta_tit').val();
+		var meta_desc = $('#conf_meta_desc').val();
 		var canonical_id = newurl+tagval;
 	}
 	
@@ -1367,7 +1367,7 @@ function staging_search()
 				'X-CSRF-Token':$('meta[name="csrfToken"]').attr('content')
 			},
 			success: function(result) {
-				$('#stagingrender').html(result);
+				$('#stagingrender').html(result).foundation();
 			}
 		});
 	}
@@ -1623,3 +1623,196 @@ function art_live_search()
 		}
 	});
 }
+
+function kwgrp_match_click()
+{
+	remove_paginate();
+	var kwgrp_match = $('textarea#kwgrp_match').val();
+	var limit = $('#show_records').val();
+	if(kwgrp_match!='')
+	{
+		if(kwgrp_match.indexOf(':')>-1)
+		{
+			$.ajax
+			({
+				method : 'POST',
+				url	   : 'adminMatch',
+				data   : {action:'match_request',limit:limit,kwgrp_match:encodeURIComponent(kwgrp_match)},
+				headers:{
+						'X-CSRF-Token':$('meta[name="csrfToken"]').attr('content')
+				},
+				success:function(result)
+				{
+					$('.reveal-overlay').css('display','none');
+					$('#popup1').css('display','none');
+					$('#html_id').attr('class','no-js');
+					$('#match_div').html(result);
+					
+				}
+			});
+		}
+		else
+		{
+			$('#popup4').css('display','block');
+			$('#warning_match').css('display','block');
+		}
+	}
+}
+
+function editmatch()
+{
+	var selected = new Array();
+	var limit = $('#show_records').val();
+	$('#tblsort input[class="checkbox_match"]:checked').each(function() {
+		selected.push($(this).val());
+	});
+	if(selected.length>0)
+	{
+		remove_paginate();
+		$('#btn_edit_match').css('display','none');
+		$.ajax
+		({
+			method : 'POST',
+			url	   : 'adminMatch',
+			data   : {action:'edit_match',selected:selected,limit:limit},
+			headers:{
+					'X-CSRF-Token':$('meta[name="csrfToken"]').attr('content')
+					
+			},
+			success:function(result)
+			{
+				$('#btn_edit_match').css('display','block');
+				$('#editmatch').html(result);
+				$('#popup2').css('display','block');
+				$('#editmatch').css('display','block');
+				$('#html_id').attr('class','no-js');
+				
+			}
+		}); 
+	}
+	else
+	{
+		$('#popup5').css('display','block');
+		$('#warning_match_select').css('display','block');
+	}
+}
+
+function match_show_filter()
+{
+	remove_paginate();
+	var limit = $('#show_records').val();
+	$.ajax
+	({
+		method : 'POST',
+		url	   : 'adminMatch',
+		data   : {action:'match_limit',limit:limit},
+		headers:{
+				'X-CSRF-Token':$('meta[name="csrfToken"]').attr('content')
+				
+		},
+		success:function(result)
+		{
+			$('#match_div').html(result);
+		}
+	});
+}
+
+function match_update_click()
+{
+	remove_paginate();
+	var limit = $('#show_records').val();
+	if($('#all_chk_match').is(':checked'))
+	{
+		if(limit=='all')
+		{
+			var update_meth = 'all';
+			var formdata = $("#kwphr_edit").val();
+		}
+	}
+	else
+	{
+		var update_meth = 'partial';
+		var formdata = $("#frm_match_edit").serialize();
+	}
+	
+	$.ajax
+	({
+		method : 'POST',
+		url	   : 'adminMatch',
+		data   : {action:'match_update',update_method:update_meth,formdata:formdata,limit:limit},
+		headers:{
+				'X-CSRF-Token':$('meta[name="csrfToken"]').attr('content')
+				
+		},
+		success:function(result)
+		{
+			$('.reveal-overlay').css('display','none');
+			$('#popup2').css('display','none');
+			$('#html_id').attr('class','no-js');
+			$('#match_div').html(result);
+		}
+	});
+}
+
+function delete_match()
+{
+	var selected = new Array();
+	var limit = $('#show_records').val();
+	$('#tblsort input[class="checkbox_match"]:checked').each(function() {
+		selected.push($(this).val());
+	});
+	if(selected.length==0)
+	{
+		$('.reveal-overlay').css('display','none');
+		$('#popup3').css('display','none');
+		$('#html_id').attr('class','no-js');
+		
+		$('#popup5').css('display','block');
+		$('#warning_match_select').css('display','block');
+	}
+	else
+	{
+		if($('#all_chk_match').is(':checked'))
+		{
+			if(limit=='all')
+			{
+				var delete_meth = 'all';
+			}
+		}
+		else
+		{
+			var delete_meth = 'partial';
+		}
+		remove_paginate();
+		$.ajax
+		({
+			method : 'POST',
+			url	   : 'adminMatch',
+			data   : {action:'delete_match',selected:selected,limit:limit,delete_method:delete_meth},
+			headers:{
+					'X-CSRF-Token':$('meta[name="csrfToken"]').attr('content')
+			},
+			success:function(result)
+			{
+				$('.reveal-overlay').css('display','none');
+				$('#popup3').css('display','none');
+				$('#html_id').attr('class','no-js');
+				$('#match_div').html(result);
+			}
+		}); 
+	}
+}
+
+function allcheck_match(element)
+{
+	if($(element).is(":checked"))
+	{
+		$('.checkbox_match').prop('checked', true);
+	}
+	else
+	{
+		$('.checkbox_match').prop('checked', false);
+	}
+}
+	
+	
