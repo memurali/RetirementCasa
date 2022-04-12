@@ -651,7 +651,7 @@ class AppController extends Controller
 		$all_article = $this->paginate($articles,$settings);
 		return $all_article;
 	}
-
+  
 	public function queue_analysis($url=null)
 	{
 		$connection = ConnectionManager::get('default');
@@ -1161,6 +1161,7 @@ class AppController extends Controller
 			$this->loadModel('Tblclassification');
 			$connection = ConnectionManager::get('default');
 			$confidence = $this->get_confidence();
+			$artdate_filter = $this->get_date_filter();
 			$filter = $_SESSION['filter'];
 			$tag = $_SESSION['tag'];
 			if($_SESSION['sorting']!='')
@@ -1239,7 +1240,9 @@ class AppController extends Controller
 																			'Tblclassification.Confidence>='.$confidence))),
 														
 						'fields' => $fields_select,
-						'conditions' => array('Tblarticle.Article_id IN('.$artids.')',array('TblcrawlerQueue.Status = "published"')),
+						'conditions' => array('Tblarticle.Article_id IN('.$artids.')',
+												array('TblcrawlerQueue.Status = "published"'),
+												array('Tblarticle.Article_date>="'.$artdate_filter.'"')),
 						'order' => $orderby,
 						'group' => 'Tblclassification.Article_id',
 					));
@@ -1247,7 +1250,7 @@ class AppController extends Controller
 					
 				}
 				
-				$tag_query_top = 'SELECT c.`Tags` as Tags,COUNT(c.`Tags`) AS cnt 
+				$tag_query_top = 'SELECT c.`Tags` as Tags,c.SEO_Tag as SEO_Tag, COUNT(c.`Tags`) AS cnt 
 									FROM `tblclassification` c,tblarticle a,tblcrawler_queue q
 									WHERE  a.Article_id=c.`Article_id` AND
 										   q.Url_id=a.Url_id AND
@@ -1256,12 +1259,13 @@ class AppController extends Controller
 									GROUP BY c.`Tags` HAVING (cnt>0) 
 									ORDER BY cnt DESC';
 								
-				$tag_query_alpha = 'SELECT DISTINCT (`Tags`) as Tags FROM `tblclassification` c,
+				$tag_query_alpha = 'SELECT Tags,`SEO_Tag` FROM `tblclassification` c,
 								tblarticle a,tblcrawler_queue q
 								WHERE  a.Article_id=c.`Article_id` AND
 								   q.Url_id=a.Url_id AND SEO_Tag NOT IN ("'.$alltag.'") AND
 								   c.Confidence>='.$confidence.' AND 
 								q.Status="published" 
+								GROUP BY Tags
 								ORDER BY Tags ASC';
 								
 				$filtered_tag_qry = 'SELECT DISTINCT (`Tags`) as Tags, `SEO_Tag`
@@ -1293,13 +1297,12 @@ class AppController extends Controller
 						'fields' => array('Article_id','Article_date','Article_title','Content_type',
 										'Url_image','Article_desc','url'=>'TblcrawlerQueue.Url','domain'=>'TblrankingScore.Domain_name',
 										'tag'=>'GROUP_CONCAT(Tblclassification.Tags)'),
-						'conditions' => array('TblcrawlerQueue.Status = "published"'),
+						'conditions' => array('TblcrawlerQueue.Status = "published"',
+										array('Tblarticle.Article_date>="'.$artdate_filter.'"')),
 						'order' => $orderby,
 						'group' => 'Tblarticle.Article_id',
 						
 					));
-					
-						
 				}
 				else
 				{
@@ -1322,7 +1325,9 @@ class AppController extends Controller
 						/*'conditions' =>array('OR'=>
 												array('Tblarticle.Article_desc REGEXP ("'.$filter.'")',
 														'Tblarticle.Article_title REGEXP ("'.$filter.'")')),*/
-						'conditions' =>array('MATCH (`Article_title`, `Article_desc`) AGAINST ("'.$filter.'")',array('TblcrawlerQueue.Status = "published"')),
+						'conditions' =>array('MATCH (`Article_title`, `Article_desc`) AGAINST ("'.$filter.'")',
+										array('TblcrawlerQueue.Status = "published"'),
+										array('Tblarticle.Article_date>="'.$artdate_filter.'"')),
 						'order' => $neworderby,
 						'group' => 'Tblarticle.Article_id',
 						
@@ -1333,7 +1338,7 @@ class AppController extends Controller
 									
 				}
 				
-				$tag_query_top = "SELECT c.`Tags` as Tags,COUNT(c.`Tags`) AS cnt 
+				$tag_query_top = "SELECT c.`Tags` as Tags,c.SEO_Tag as SEO_Tag,COUNT(c.`Tags`) AS cnt 
 									FROM `tblclassification` c,tblarticle a,tblcrawler_queue q
 									WHERE  a.Article_id=c.`Article_id` AND
 										   q.Url_id=a.Url_id AND
@@ -1341,21 +1346,23 @@ class AppController extends Controller
 									q.Status='published' GROUP BY c.`Tags` HAVING (cnt>0) 
 									ORDER BY cnt DESC";
 								
-				$tag_query_alpha = "SELECT DISTINCT (`Tags`) as Tags FROM `tblclassification` c,
+				$tag_query_alpha = "SELECT Tags, SEO_Tag FROM `tblclassification` c,
 									tblarticle a,tblcrawler_queue q
 									WHERE  a.Article_id=c.`Article_id` AND
 									   q.Url_id=a.Url_id AND
 									   c.Confidence>=".$confidence." AND 
-									q.Status='published'
+									q.Status='published' 
+									GROUP BY Tags
 									ORDER BY Tags ASC";
 									
 			}
 			
-			
 			if($articles!='')
 			{
 				
-				$limit = 10;
+				$limit = $this->get_art_limit();
+				if($limit=='')
+					$limit = 10;
 				
 				$parameters = $this->request->getAttribute('params');
 
@@ -1455,5 +1462,54 @@ class AppController extends Controller
 		$editarr = $this->edit_view($urlid);
 		return $editarr;
 		
+	}
+	public function get_art_limit()
+	{
+		$connection = ConnectionManager::get('default');
+		$sel_qry = "SELECT `Value` FROM `tblconfig` WHERE `Key_name`='article_limit'";
+		$art_arr = $connection->execute($sel_qry)->fetchAll('assoc');
+		$art_limit = $art_arr[0]['Value'];
+		return $art_limit;
+	}
+	public function get_date_filter()
+	{
+		$connection = ConnectionManager::get('default');
+		$sel_qry = "SELECT `Value` FROM `tblconfig` WHERE `Key_name`='date_filter'";
+		$art_arr = $connection->execute($sel_qry)->fetchAll('assoc');
+		$art_date_filter = $art_arr[0]['Value'];
+		return $art_date_filter;
+	}
+	public function get_meta_data()
+	{
+		$connection = ConnectionManager::get('default');
+		$sel_qry = "SELECT `Value` FROM `tblconfig` WHERE `Key_name`='meta_title' OR `Key_name` = 'meta_desc'";
+		$meta_arr = $connection->execute($sel_qry)->fetchAll('assoc');
+		return $meta_arr;
+	}
+	public function getmatchdata($limit='all')
+	{
+		$this->loadModel('Tblmatch');
+		$connection = ConnectionManager::get('default');
+		$match = $this->Tblmatch->find('all', array(
+					'fields' => array('Tblmatch.Matchid','Tblmatch.Kw_Phrase','Tblmatch.Kw_Group'),
+					'order' => array('Tblmatch.Datecreated DESC')
+				));	
+				
+		if($limit=='all')	
+		{
+			$match_arr = $match;
+			
+		}
+		else
+		{
+			$settings = ['page' => 1,
+						 'limit' => $limit,
+						  'maxLimit' => 100
+						];
+			$match_arr = $this->paginate($match,$settings);
+			
+		}
+		
+		return $match_arr;
 	}
 }

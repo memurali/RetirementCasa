@@ -21,8 +21,8 @@ class UsersController extends AppController
 	public function beforeFilter(EventInterface  $event)
     {
        	parent::beforeFilter($event);
-		   $this->Auth->allow(['process','search','config','urlprocess','signout','adminDashboard','adminDashboardLive','adminDashboardUsers',
-		   'adminDashboardStaging','adminSetting','paginationTest','userDashboard','userDashboardSaved','index','signin','signup','about','contact','dbchange','notFound']);
+		   $this->Auth->allow(['process','search','config','urlprocess','signout','adminDashboard','adminDashboardLive','adminDashboardUsers','directory',
+		   'adminDashboardStaging','adminSetting','adminMatch','paginationTest','userDashboard','userDashboardSaved','index','signin','signup','about','contact','dbchange','notFound']);
 	
     }
 	public function signup()
@@ -378,7 +378,7 @@ class UsersController extends AppController
 					$responsearr = parent::searcharticle();					
 					$checkcount = count($responsearr[0]);					
 					if($checkcount==0)						
-						$this->redirect(['controller' => 'users','action' => 'notFound']);									
+						$this->redirect(['controller' => 'users','action' => 'notFound']);							
 				}						
 			}			
 			$this->set('article_arr',$responsearr[0]);
@@ -390,6 +390,8 @@ class UsersController extends AppController
 			}			
             $datalist_tags = parent::datalist_tag();						
 			$this->set('datalist_tags',$datalist_tags);
+			$conf_meta_data = parent::get_meta_data();						
+			$this->set('meta_data',$conf_meta_data);
 		}
 
 	}
@@ -666,8 +668,7 @@ class UsersController extends AppController
 						exit;
 					
 				}
-				
-							
+											
 				$this->set('select_arr',$select_arr);
 				$this->render('admin_dashboard_staging_filter');
 				exit;
@@ -1159,10 +1160,36 @@ class UsersController extends AppController
 							WHERE `Key_name`='confidence'";
 						$connection->execute($update_qry);
 					}
-					if($_POST['confidence']!='')
+					if($_POST['dscore']!='')
 					{
 						$update_qry = "UPDATE `tblconfig` SET `Value`=".$_POST['dscore']." 
 							WHERE `Key_name`='domain_score'";
+						$connection->execute($update_qry);
+					}
+					if($_POST['art_limit']!='')
+					{
+						$update_qry = "UPDATE `tblconfig` SET `Value`=".$_POST['art_limit']." 
+							WHERE `Key_name`='article_limit'";
+						$connection->execute($update_qry);
+					}
+					if($_POST['date_filter']!='')
+					{
+						$update_qry = "UPDATE `tblconfig` SET `Value`='".$_POST['date_filter']."'
+							WHERE `Key_name`='date_filter'";
+						$connection->execute($update_qry);
+					}
+					if($_POST['meta_title']!='')
+					{
+						$meta_title = str_replace('"',"'",$_POST['meta_title']);
+						$update_qry = 'UPDATE `tblconfig` SET `Value`="'.trim($meta_title).'"
+							WHERE `Key_name`="meta_title"';
+						$connection->execute($update_qry);
+					}
+					if($_POST['meta_desc']!='')
+					{
+						$meta_desc = str_replace('"',"'",$_POST['meta_desc']);
+						$update_qry = 'UPDATE `tblconfig` SET `Value`="'.trim($meta_desc).'"
+							WHERE `Key_name`="meta_desc"';
 						$connection->execute($update_qry);
 					}
 				}
@@ -1171,16 +1198,16 @@ class UsersController extends AppController
 			$approval = parent::needstoapproval();
 			$this->set('approvalcount',$approval);
 
-			/*$cronlog_file = fopen("../bin/cron.log", "r") or die("Unable to open file!");
-			//$txtdata =  fread($myfile,filesize("report.txt"));
-			$txtdata =  nl2br(file_get_contents("../bin/cron.log"));
-			fclose($cronlog_file);*/
-
+		
 
 			$sel_config_qry = "SELECT `Key_name`,`Value` FROM `tblconfig` 
 								WHERE `Key_name`='batch_size' OR 
 									  `Key_name` = 'confidence' OR 
-									  `Key_name` = 'domain_score'";
+									  `Key_name` = 'domain_score' OR 
+									  `Key_name` = 'article_limit' OR
+									  `Key_name` = 'date_filter' OR 
+									  `Key_name` = 'meta_title' OR 
+									  `Key_name` = 'meta_desc'";
 			$config_arr = $connection->execute($sel_config_qry)->fetchAll('assoc');
 			foreach($config_arr as $config)
 			{
@@ -1190,13 +1217,167 @@ class UsersController extends AppController
 					$confidence = $config['Value'];
 				if($config['Key_name']=='domain_score')
 					$domain_score = $config['Value'];
+				if($config['Key_name']=='article_limit')
+					$article_limit = $config['Value'];
+				if($config['Key_name']=='date_filter')
+					$date_filter = $config['Value'];
+				if($config['Key_name']=='meta_title')
+					$meta_title = $config['Value'];
+				if($config['Key_name']=='meta_desc')
+					$meta_desc = $config['Value'];
 			}
 			
 			$this->set('batch_size',$batch_size);
 			$this->set('confidence',$confidence);
 			$this->set('domain_score',$domain_score);
+			$this->set('article_limit',$article_limit);
+			$this->set('date_filter',$date_filter);
+			$this->set('meta_title',$meta_title);
+			$this->set('meta_desc',$meta_desc);
 			//$this->set('filedata',$txtdata);
 		}
+	}
+	public function adminMatch()
+	{
+		$this->autoLayout = false;
+		$connection = ConnectionManager::get('default');
+		if($_SESSION['userid']=='')
+		{
+			$this->redirect(['action' => 'signin']);
+		}
+		else
+		{
+			if($this->request->is('post'))
+			{
+				if($this->request->is('ajax'))
+				{ 
+					if($_POST['action']=='match_request')
+					{
+						$kwgrp_match = urldecode($_POST['kwgrp_match']);
+						$kwgrp_assign = trim($kwgrp_match);
+						$kwgrp_arr = explode("\n",$kwgrp_assign);
+						$datetime = date('Y-m-d H:i:s');
+						foreach($kwgrp_arr as $match)
+						{
+							if($match!='')
+							{
+								$match = preg_replace('/[^a-zA-Z0-9_ \[\]\.\(\)\'\:%&-]/s', '', $match);
+								$match = str_replace("\t",'',$match);
+								$match = str_replace('"',"'",$match);
+								$phrase_grp = explode(":",$match);
+								$phrase = strtolower(trim($phrase_grp[0]));
+								$kwgrp = trim($phrase_grp[1]);
+								$sel_qry = 'SELECT `Matchid` FROM `tblmatch` WHERE `Kw_Phrase`="'.$phrase.'"';
+								$sel_arr = $connection->execute($sel_qry)->fetchAll('assoc');
+								if(count($sel_arr)==0)
+								{
+									$ins_qry = 'INSERT INTO `tblmatch`(`Kw_Phrase`, `Kw_Group`, `DateCreated`) 
+												VALUES ("'.$phrase.'","'.$kwgrp.'","'.$datetime.'")';
+									$connection->execute($ins_qry);
+								}
+							}
+						}
+						$limit = $_POST['limit'];
+					}
+					if($_POST['action']=='match_limit')
+					{
+						$limit = $_POST['limit'];
+						$_SESSION['limit_match'] = $limit;
+					}
+					if($_POST['action']=='edit_match')
+					{
+						$matchid = $_POST['matchid'];
+						$selected_ids = $_POST['selected'];
+						$sel_qry = "SELECT `Matchid`,`Kw_Phrase`,`Kw_Group` FROM `tblmatch` WHERE 
+									`Matchid` IN (". implode(',', $selected_ids).")";
+						$matcharr = $connection->execute($sel_qry)->fetchAll('assoc');
+						$this->set('flow','editflow');
+						$this->set('matcharr',$matcharr);
+						return $this->render('admin_match_filter');
+						exit;
+					}
+					if($_POST['action']=='match_update')
+					{
+						$limit = $_POST['limit'];
+						$update_method = $_POST['update_method'];
+						$datetime = date('Y-m-d H:i:s');
+						if($update_method!='all')
+						{
+							$formdata = $_POST['formdata'];
+							parse_str($formdata, $formval);
+							$matchids = $formval['matchid_edit'];
+							$kw_grp_match = $formval['kwphr_edit'];
+							$del_qry = "DELETE FROM `tblmatch` WHERE `Matchid` IN (".$matchids.")";
+							$connection->execute($del_qry);
+						}
+						else
+						{
+							$kw_grp_match = $_POST['formdata'];
+							$truncate_qry = "TRUNCATE tblmatch";
+							$connection->execute($truncate_qry);
+						}
+						
+						$kwgrp_match = urldecode($kw_grp_match);
+						$kwgrp_assign = trim($kwgrp_match);
+						$kwgrp_arr = explode("\n",$kwgrp_assign);
+						$datetime = date('Y-m-d H:i:s');
+						foreach($kwgrp_arr as $match)
+						{
+							if($match!='')
+							{
+								$match = preg_replace('/[^a-zA-Z0-9_ \[\]\.\(\)\'\:%&-]/s', '', $match);
+								$match = str_replace("\t",'',$match);
+								$match = str_replace('"',"'",$match);
+								$phrase_grp = explode(":",$match);
+								$phrase = strtolower(trim($phrase_grp[0]));
+								$kwgrp = trim($phrase_grp[1]);
+								$sel_qry = 'SELECT `Matchid` FROM `tblmatch` WHERE `Kw_Phrase`="'.$phrase.'"';
+								$sel_arr = $connection->execute($sel_qry)->fetchAll('assoc');
+								if(count($sel_arr)==0)
+								{
+									$ins_qry = 'INSERT INTO `tblmatch`(`Kw_Phrase`, `Kw_Group`, `DateCreated`) 
+												VALUES ("'.$phrase.'","'.$kwgrp.'","'.$datetime.'")';
+									$connection->execute($ins_qry);
+								}
+							}
+						}
+					
+					}
+					if($_POST['action']=='delete_match')
+					{
+						if($_POST['delete_method']=='all')
+						{
+							$delqry = "TRUNCATE tblmatch";
+						}
+						else
+						{
+							$selected_ids = $_POST['selected'];
+							$delqry = "DELETE FROM `tblmatch` 
+									WHERE `Matchid` IN (". implode(',', $selected_ids).")";
+						}
+						$limit = $_POST['limit'];
+						$connection->execute($delqry);
+					}
+					$match_data = parent::getmatchdata($limit);
+					$this->set('matchdata',$match_data);
+					$this->set('limit',$limit);
+					return $this->render('admin_match_filter');
+					exit;
+				}
+			}
+		}
+		/** get all data from DB **/
+		if($_SESSION['limit_match']=='')
+			$limit = 'all';
+		else
+			$limit = $_SESSION['limit_match'];
+		
+		$match_data = parent::getmatchdata($limit);
+		$this->set('matchdata',$match_data);
+		$this->set('limit',$limit);
+		
+		$approval = parent::needstoapproval();
+		$this->set('approvalcount',$approval);
 	}
 	public function process()
 	{
@@ -1668,6 +1849,93 @@ class UsersController extends AppController
 		$datalist_tags = parent::datalist_tag();					
 		$this->set('datalist_tags',$datalist_tags);
 	}
+	public function directory()
+	{				
+		$connection = ConnectionManager::get('default');				
+		if($this->request->is('post'))		
+		{			
+			if($this->request->is('ajax'))			
+			{				
+				if($_POST['action']=='article_search')				
+				{										
+					$_SESSION['redirect_header'] = 'true';										
+					$_SESSION['filter'] = 'all';										
+					if($_POST['tag_select']!='')											
+					{						
+						$_SESSION['index_search'] = $_POST['tag_select'];
+						$seo_tag_qry = "SELECT DISTINCT(SEO_Tag) FROM `tblclassification` 	
+												WHERE `Tags` = '".$_POST['tag_select']."'";		
+						$seo_tag_arr = $connection->execute($seo_tag_qry)->fetchAll('assoc');	
+						$_SESSION['tag'] = $seo_tag_arr[0]['SEO_Tag'];	
+						$_SESSION['match_tag'] = $seo_tag_arr[0]['SEO_Tag'];												
+					}										
+					if($_POST['index_search']!='')											
+					{												
+						$_SESSION['index_search'] = $_POST['index_search'];													
+						$str = $_POST['index_search'];													
+						$check_tag_qry = "SELECT DISTINCT(SEO_Tag) FROM `tblclassification` 	
+												WHERE LOWER(`Tags`) = '".strtolower(addslashes($str))."' OR 
+												SEO_Tag = '".$str."'";		
+						$check_tag_arr = $connection->execute($check_tag_qry)->fetchAll('assoc');	
+						$check_tag = $check_tag_arr[0]['SEO_Tag'];												
+						if($check_tag!='')													
+						{							
+							$_SESSION['tag'] = $check_tag;														
+							$_SESSION['match_tag'] = $check_tag;														
+							$responsearr = parent::searcharticle();						
+						}												
+						else													
+						{						 							
+							$str_arr = explode(" ",$str);							
+							$arr = '';							
+							foreach($str_arr as $val)							
+							{								
+								if(strlen($val)>3)								
+								{									
+									$val = strtolower($val);									
+									$val = preg_replace('/[^A-Za-z0-9\-]/', '', $val);									
+									$wh_arr = array('','will','what','where','shall','when','could','should','would','your','whats');									
+									$space = ' ';									
+									if(array_search($val,$wh_arr)=='')										
+										$arr.=$space.trim($val).$space.'|';								
+								}															
+							}							
+							$arr_val = rtrim($arr,'|');							
+							$_SESSION['filter'] = $arr_val;							
+							//$_SESSION['seo'] = '';														
+							$_SESSION['tag'] = '';														
+							$_SESSION['match_tag'] = '';											
+						}					
+					}									
+				}								
+				exit;							
+			}					
+		}				
+		$datalist_tags = parent::datalist_tag();					
+		$this->set('datalist_tags',$datalist_tags);
+		
+		$confidence = $this->get_confidence();
+		$tag_query_top = "SELECT c.`Tags` as Tags,c.SEO_Tag as SEO_Tag,COUNT(c.`Tags`) AS cnt 
+									FROM `tblclassification` c,tblarticle a,tblcrawler_queue q
+									WHERE  a.Article_id=c.`Article_id` AND
+										   q.Url_id=a.Url_id AND
+										   c.Confidence>=".$confidence." AND 
+									q.Status='published' GROUP BY c.`Tags` HAVING (cnt>0) 
+									ORDER BY cnt DESC";
+								
+		$tag_query_alpha = "SELECT Tags, SEO_Tag FROM `tblclassification` c,
+							tblarticle a,tblcrawler_queue q
+							WHERE  a.Article_id=c.`Article_id` AND
+							   q.Url_id=a.Url_id AND
+							   c.Confidence>=".$confidence." AND 
+							q.Status='published' 
+							GROUP BY Tags
+							ORDER BY Tags ASC";
+		$tag_alpha_arr = $connection->execute($tag_query_alpha)->fetchAll('assoc');
+		$tag_top_arr = $connection->execute($tag_query_top)->fetchAll('assoc');
+		$this->set('tag_alpha_arr',$tag_alpha_arr);
+		$this->set('tag_top_arr',$tag_top_arr);
+	}
 	public function contact()
 	{
 		$connection = ConnectionManager::get('default');		
@@ -1749,15 +2017,72 @@ class UsersController extends AppController
 	}
 	public function dbchange()
 	{
-		$connection = ConnectionManager::get('default');
-		$alt_qry = "ALTER TABLE `tblarticle` ADD `Content_type` VARCHAR(50) NOT NULL AFTER `Thumbs_down`";
+		/*$connection = ConnectionManager::get('default');
+		$alt_qry = "ALTER TABLE `tblconfig` CHANGE `Value` `Value` VARCHAR(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL";
 		$connection->execute($alt_qry);
-		/*$update_qry = "UPDATE `tblclassification` SET `SEO_Tag`= TRIM(TRAILING '-' FROM LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(`Tags`,' ','-'), '&','-'),'?','-'),'--','-'),'--','-')));";
-		$connection->execute($update_qry);*/
-		$update_qry = "UPDATE `tblarticle` SET `Content_type`= 'article'";
-		$connection->execute($update_qry);
+		$ins_qry = "INSERT INTO `tblconfig` (`Config_id`, `Key_name`, `Value`, `Datecreated`) VALUES (NULL, 'meta_title', '', current_timestamp())";
+		$connection->execute($ins_qry);
+		$ins_qry = "INSERT INTO `tblconfig` (`Config_id`, `Key_name`, `Value`, `Datecreated`) VALUES (NULL, 'meta_desc', '', current_timestamp())";
+		$connection->execute($ins_qry);*/
+		$title = "Don’t Stop Adding To Your Investments";
+		$connection = ConnectionManager::get('default');
+		$tag_id = $this->get_tagid();
+		$confidence = $this->get_confidence();
+		$conf_val = round($confidence/100,2);
+		$match_qry = 'SELECT Kw_Group FROM `tblmatch` WHERE INSTR("'.$title.'", Kw_Phrase)>0';
+		try 
+		{
+			$match_arr = $connection->execute($match_qry)->fetchAll('assoc');
 		
-
+			$classification = array();
+			if(count($match_arr)>0)
+			{
+				foreach($match_arr as $kwgrp)
+				{
+					$classification[] = array(
+										'tag_name' => $kwgrp['Kw_Group'],
+										'tag_id' => $tag_id,
+										'confidence' => $conf_val
+										);
+				}
+						
+			}
+			else
+			{
+				$classification[] = array(
+										'tag_name' => 'Misc',
+										'tag_id' => $tag_id,
+										'confidence' => $conf_val
+										);
+			}
+			$array = Array
+						(
+							Array
+								(
+									'text' => $title,
+									'external_id' => '',
+									'error' => '',
+									'classifications' => $classification
+								)
+						);
+		}
+		catch (\Exception $e) 
+		{
+			$status = $e->getMessage();
+			$array = Array
+						(
+							Array
+								(
+									'text' => $title,
+									'external_id' => '',
+									'error' => $status,
+									'classifications' => ''
+								)
+						);
+			
+		}
+		print_r($array);
+		//return $array;
 		
 	}
 	public function sendmail($fromaddress,$fromname,$toaddress,$subject,$message)
